@@ -17,12 +17,13 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from blog.views import index, post_list, post_detail
+from blog.views import index, post_list, post_detail, PostViewSet
 
 router = DefaultRouter()
+router.register('post_viewset', PostViewSet, 'post_model_viewset')
+urlpatterns = router.urls
 
-urlpatterns = [
-    path('', index),
-    path('posts/', post_list),
-    path('posts/<int:pk>', post_detail)
-]
+urlpatterns.append(path('', index))
+urlpatterns.append(path('posts/', post_list))
+urlpatterns.append(path('posts/<int:pk>', post_detail))
+

@@ -17,10 +17,12 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-from blog.views import index, post_list, post_detail, PostViewSet
+from blog.views import index, post_list, post_detail, PostViewSet, UserViewSet
 
 router = DefaultRouter()
 router.register('post_viewset', PostViewSet, 'post_model_viewset')
+router.register('users', UserViewSet, "users")
+
 urlpatterns = router.urls
 
 urlpatterns.append(path('', index))

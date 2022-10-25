@@ -1,15 +1,19 @@
+from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
 # Create your views here.
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status, viewsets
+from rest_framework.authentication import TokenAuthentication
 from rest_framework.decorators import api_view
 from rest_framework.parsers import JSONParser
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from blog.models import Post
-from blog.serializers import PostSerializer
+from blog.permissions import IsAuthorOrReadOnly, IsAuthor
+from blog.serializers import PostSerializer, UserSerializer
 
 
 def index(request):
@@ -74,11 +78,14 @@ def post_detail(request, pk):
         serializer = PostSerializer(post)
         return Response(serializer.data)
     elif request.method=="PUT":
-        serializer = PostSerializer(post, data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return  Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        print("Login user",request.user)
+        if request.user == post.author:
+            serializer = PostSerializer(post, data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                return  Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response("You don't have the permission")
     elif request.method=="DELETE":
         post.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -86,4 +93,12 @@ def post_detail(request, pk):
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
+    authentication_classes = (TokenAuthentication, )
+    permission_classes = [IsAuthenticated, IsAuthor]
+
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
 

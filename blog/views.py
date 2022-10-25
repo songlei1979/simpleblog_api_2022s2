@@ -3,10 +3,12 @@ from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
 
 # Create your views here.
+from django.template import context
 from django.views.decorators.csrf import csrf_exempt
+from pytz import unicode
 from rest_framework import status, viewsets
-from rest_framework.authentication import TokenAuthentication
-from rest_framework.decorators import api_view
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication, BasicAuthentication
+from rest_framework.decorators import api_view, authentication_classes
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -67,7 +69,9 @@ def post_list(request):
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
 @api_view(["GET", "PUT", "DELETE"])
+@authentication_classes([TokenAuthentication])
 def post_detail(request, pk):
     try:
         post = Post.objects.get(pk=pk)
@@ -78,7 +82,8 @@ def post_detail(request, pk):
         serializer = PostSerializer(post)
         return Response(serializer.data)
     elif request.method=="PUT":
-        print("Login user",request.user)
+        print("login user", request.user)
+        print("author user", post.author)
         if request.user == post.author:
             serializer = PostSerializer(post, data=request.data)
             if serializer.is_valid():

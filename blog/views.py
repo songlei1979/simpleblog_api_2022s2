@@ -1,3 +1,4 @@
+from django.contrib.auth import logout
 from django.contrib.auth.models import User
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render
@@ -8,18 +9,19 @@ from django.views.decorators.csrf import csrf_exempt
 from pytz import unicode
 from rest_framework import status, viewsets
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication, BasicAuthentication
-from rest_framework.decorators import api_view, authentication_classes
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.parsers import JSONParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from blog.models import Post
+from blog.models import Post, Category
 from blog.permissions import IsAuthorOrReadOnly, IsAuthor
-from blog.serializers import PostSerializer, UserSerializer
+from blog.serializers import PostSerializer, UserSerializer, CategorySerializer
 
 
 def index(request):
     return HttpResponse("hello world")
+
 
 # @csrf_exempt
 # def post_list(request):
@@ -62,7 +64,7 @@ def post_list(request):
         posts = Post.objects.all()
         serializer = PostSerializer(posts, many=True)
         return Response(serializer.data)
-    elif request.method=="POST":
+    elif request.method == "POST":
         serializer = PostSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -78,32 +80,66 @@ def post_detail(request, pk):
     except Post.DoesNotExist:
         return Response(status=status.HTTP_404_NOT_FOUND)
 
-    if request.method=="GET":
+    if request.method == "GET":
         serializer = PostSerializer(post)
         return Response(serializer.data)
-    elif request.method=="PUT":
+    elif request.method == "PUT":
         print("login user", request.user)
         print("author user", post.author)
         if request.user == post.author:
             serializer = PostSerializer(post, data=request.data)
             if serializer.is_valid():
                 serializer.save()
-                return  Response(serializer.data)
+                return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response("You don't have the permission")
-    elif request.method=="DELETE":
+    elif request.method == "DELETE":
         post.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
-    authentication_classes = (TokenAuthentication, )
-    permission_classes = [IsAuthenticated, IsAuthor]
+    authentication_classes = (TokenAuthentication,)
 
+    # permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        title = request.data["title"]
+        author = request.user
+        body = request.data["body"]
+        category = request.data["category"]
+        try:
+            post = Post.objects.create(title=title, author=author, body=body, category_id=category)
+            post.save()
+            serializer = PostSerializer(post)
+            return Response(serializer.data)
+        except:
+            return Response(serializer.errors)
 
 
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
 
+
+class CategoryViewSet(viewsets.ModelViewSet):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializer
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def User_logout(request):
+    request.user.auth_token.delete()
+    logout(request)
+    return Response('User Logged out successfully')
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@authentication_classes([TokenAuthentication])
+def User_ID_Search(request):
+    return Response({"userid": request.user.id})

@@ -2,7 +2,7 @@ from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 from rest_framework.authtoken.models import Token
 
-from blog.models import Post
+from blog.models import Post, Category
 
 
 class PostSerializer(serializers.ModelSerializer):
@@ -32,3 +32,9 @@ class UserSerializer(serializers.ModelSerializer):
         Token.objects.create(user=user)
         user.groups.add(1)
         return user
+
+
+class CategorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ["id", "name"]
